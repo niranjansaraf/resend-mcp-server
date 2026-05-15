@@ -1,6 +1,8 @@
 import os
 import httpx
 from fastmcp import FastMCP
+from starlette.requests import Request
+from starlette.responses import JSONResponse
 
 mcp = FastMCP("resend-email")
 
@@ -32,6 +34,11 @@ async def send_email(to: str, subject: str, body: str) -> str:
 
         email_id = response.json().get("id", "unknown")
         return f"Email sent successfully. Resend ID: {email_id}"
+
+
+@mcp.custom_route("/health", methods=["GET"])
+async def health(request: Request) -> JSONResponse:
+    return JSONResponse({"status": "ok"})
 
 
 if __name__ == "__main__":
