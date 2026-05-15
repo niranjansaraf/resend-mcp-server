@@ -7,13 +7,22 @@ from starlette.responses import JSONResponse
 mcp = FastMCP("resend-email")
 
 @mcp.tool()
-async def send_email(to: str, subject: str, body: str) -> str:
-    """Send an email to the specified address via Resend."""
+async def send_email(to: str, subject: str, body: str, html: str | None = None) -> str:
+    """Send an email via Resend. Provide html for a formatted email; body is the plain-text fallback."""
     api_key = os.environ.get("RESEND_API_KEY")
     if not api_key:
         raise ValueError("RESEND_API_KEY environment variable is not set")
 
     from_address = os.environ.get("FROM_ADDRESS", "onboarding@resend.dev")
+
+    payload: dict = {
+        "from": from_address,
+        "to": [to],
+        "subject": subject,
+        "text": body,
+    }
+    if html:
+        payload["html"] = html
 
     async with httpx.AsyncClient(timeout=15) as client:
         response = await client.post(
@@ -22,12 +31,7 @@ async def send_email(to: str, subject: str, body: str) -> str:
                 "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json",
             },
-            json={
-                "from": from_address,
-                "to": [to],
-                "subject": subject,
-                "text": body,
-            },
+            json=payload,
         )
         if response.status_code != 200:
             raise RuntimeError(f"Resend API error {response.status_code}: {response.text}")
